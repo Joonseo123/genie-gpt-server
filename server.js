@@ -1,4 +1,4 @@
-require("dotenv").config(); 
+require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
@@ -9,7 +9,12 @@ app.use(express.json());
 app.use(cors());
 
 app.post("/gpt", async (req, res) => {
-  const prompt = req.body.prompt;
+  // ✨ 수정된 부분: prompt가 없을 경우 대비
+  const prompt = req.body.prompt || req.body.messages?.[0]?.content;
+
+  if (!prompt) {
+    return res.status(400).send("❗️prompt가 전달되지 않았습니다.");
+  }
 
   try {
     const response = await axios.post(
@@ -22,14 +27,15 @@ app.post("/gpt", async (req, res) => {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         },
       }
     );
 
-    res.send(response.data.choices[0].message.content);
+    const result = response.data.choices[0].message.content;
+    res.send(result);
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    console.error("❌ GPT 호출 에러:", error.response?.data || error.message);
     res.status(500).send("GPT 호출 실패: " + (error.response?.data?.error?.message || error.message));
   }
 });
